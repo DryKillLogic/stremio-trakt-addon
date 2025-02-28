@@ -27,7 +27,7 @@ const formatRuntime = (runtime) => {
 
 const getMetadataByTmdbId = async (tmdbId, type, tmdbApiKey, language = 'en-US') => {
     const redisKey = generateRedisKey(tmdbId, type, language);
-    const endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?language=${language}&api_key=${tmdbApiKey}`;
+    const endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${tmdbApiKey}&language=${language}${type === 'tv' ? '&append_to_response=external_ids' : ''}`;
 
     try {
         const cachedData = await safeRedisCall('get', redisKey);
@@ -41,6 +41,8 @@ const getMetadataByTmdbId = async (tmdbId, type, tmdbApiKey, language = 'en-US')
         });
 
         const data = response.data;
+        
+        log.debug(`TMDB response for ${type} with ID ${tmdbId}: ${JSON.stringify(data.external_ids)}`);
 
         const result = {
             title: data.title || data.name,
@@ -50,7 +52,8 @@ const getMetadataByTmdbId = async (tmdbId, type, tmdbApiKey, language = 'en-US')
             lastAirDate: data.last_air_date ? data.last_air_date.slice(0, 4) : null,
             imdbRating: data.vote_average ? data.vote_average.toFixed(1) : null,
             genres: data.genres ? data.genres.map(genre => genre.name) : [],
-            runtime: formatRuntime(data.runtime)
+            runtime: formatRuntime(data.runtime),
+            tvdbId: type === 'tv' && data.external_ids && data.external_ids.tvdb_id ? data.external_ids.tvdb_id : null
         };
 
         const cacheDuration = parseCacheDuration(process.env.TMDB_CACHE_DURATION || '1d');

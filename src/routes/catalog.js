@@ -2,7 +2,7 @@ const express = require('express');
 const { pool } = require('../helpers/db');
 const log = require('../helpers/logger');
 const { fetchListItems, fetchWatchlistItems, fetchRecommendations, fetchTrendingItems, fetchPopularItems, handleTraktHistory } = require('../api/trakt');
-const { getMetadataByTmdbId } = require('../api/tmdb');
+const { getMetadataByTmdbId, getTvdbIdFromTmdb } = require('../api/tmdb');
 const { getFanartLogo } = require('../api/fanart');
 const { getRpdbPosterUrl } = require('../api/rpdb');
 
@@ -144,7 +144,7 @@ router.get("/:configParameters?/catalog/:type/:id/:extra?.json", async (req, res
                         }
 
                         if (fanartApiKey) {
-                            logoUrl = await getFanartLogo(movie.ids.tmdb, language, fanartApiKey);
+                            logoUrl = await getFanartLogo(movie.ids.tmdb, language, fanartApiKey, 'movie');
                         }
 
                         return {
@@ -179,7 +179,15 @@ router.get("/:configParameters?/catalog/:type/:id/:extra?.json", async (req, res
                         }
             
                         if (fanartApiKey) {
-                            logoUrl = await getFanartLogo(show.ids.tmdb, language, fanartApiKey);
+                            try {
+                                if (tmdbDetails.tvdbId) {
+                                    logoUrl = await getFanartLogo(tmdbDetails.tvdbId, language, fanartApiKey, 'tv');
+                                } else {
+                                    log.warn(`No TVDB ID found for show with TMDB ID: ${show.ids.tmdb}`);
+                                }
+                            } catch (error) {
+                                log.error(`Error getting Fanart logo for show: ${error.message}`);
+                            }
                         }
             
                         const releaseInfo = tmdbDetails.releaseDate === tmdbDetails.lastAirDate
@@ -219,7 +227,7 @@ router.get("/:configParameters?/catalog/:type/:id/:extra?.json", async (req, res
                         }
 
                         if (fanartApiKey) {
-                            logoUrl = await getFanartLogo(listItem.movie.ids.tmdb, language, fanartApiKey);
+                            logoUrl = await getFanartLogo(listItem.movie.ids.tmdb, language, fanartApiKey, 'movie');
                         }
 
                         return {
@@ -251,7 +259,15 @@ router.get("/:configParameters?/catalog/:type/:id/:extra?.json", async (req, res
                         }
 
                         if (fanartApiKey) {
-                            logoUrl = await getFanartLogo(listItem.show.ids.tmdb, language, fanartApiKey);
+                            try {
+                                if (tmdbDetails.tvdbId) {
+                                    logoUrl = await getFanartLogo(tmdbDetails.tvdbId, language, fanartApiKey, 'tv');
+                                } else {
+                                    log.warn(`No TVDB ID found for show with TMDB ID: ${listItem.show.ids.tmdb}`);
+                                }
+                            } catch (error) {
+                                log.error(`Error getting Fanart logo for show: ${error.message}`);
+                            }
                         }
 
                         const releaseInfo = tmdbDetails.releaseDate === tmdbDetails.lastAirDate

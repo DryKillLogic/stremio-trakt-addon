@@ -1,14 +1,23 @@
 const axios = require('axios');
 const log = require('../helpers/logger');
 
-const getFanartLogo = async (tmdbId, preferredLang, fanartApiKey) => {
+const getFanartLogo = async (id, preferredLang, fanartApiKey, type) => {
     try {
-        const url = `https://webservice.fanart.tv/v3/movies/${tmdbId}/?api_key=${fanartApiKey}`;
+        const mediaType = type === 'tv' || type === 'series' ? 'tv' : 'movies';
+        const idType = mediaType === 'tv' ? 'thetvdb' : 'tmdb';
         
-        log.debug(`Fetching Fanart logos from: ${url}`);
+        if (!id) {
+            log.warn(`No ${idType} ID provided for type ${type}`);
+            return '';
+        }
+
+        const url = `https://webservice.fanart.tv/v3/${mediaType}/${id}/?api_key=${fanartApiKey}`;
+        
+        log.debug(`Fetching Fanart logos from: ${url} using ${idType} ID`);
 
         const response = await axios.get(url);
-        const logos = response.data.hdmovielogo || [];
+        
+        const logos = mediaType === 'tv' ? response.data.hdtvlogo : response.data.hdmovielogo || [];
         
         log.debug(`Logos fetched: ${JSON.stringify(logos)}`);
 
@@ -32,7 +41,8 @@ const getFanartLogo = async (tmdbId, preferredLang, fanartApiKey) => {
         log.debug(`Best logo URL: ${bestLogoUrl}`);
         return bestLogoUrl;
     } catch (error) {
-        log.error(`Error fetching logos from Fanart.tv for TMDB ID ${tmdbId}:`, error.message);
+        const idType = type === 'tv' || type === 'series' ? 'thetvdb' : 'tmdb';
+        log.error(`Error fetching logos from Fanart.tv for ${idType} ID ${id}:`, error.message);
         return '';
     }
 };
